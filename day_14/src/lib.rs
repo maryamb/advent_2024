@@ -137,6 +137,12 @@ fn convert_to_map(input: &Vec<Robot>, max_x: i32, max_y: i32) -> Vec<Vec<usize>>
     maze
 }
 
+fn get_std(robots: &Vec<Robot>) -> f32 {
+    let mean: f32 = robots.iter().map(|r| {r.p.y as f32}).sum();
+    let std = robots.iter().map(|r| (r.p.y as f32 - mean).abs()).sum();
+    std
+}
+
 fn is_symmetric(maze: &Vec<Vec<usize>>) -> bool {
     let m = maze[0].len();  
     maze.par_iter().all(|row| {
@@ -148,7 +154,23 @@ fn is_symmetric(maze: &Vec<Vec<usize>>) -> bool {
     })    
 }
 
+fn measure_of_continuity(maze: &Vec<Vec<usize>>) -> usize {
+    let m = maze[0].len();
+    maze.iter().map(|row| {
+        row.windows(2).into_iter().filter(|w| {
+            w[1] != 0 && w[0] != 0
+        })
+    }).count() +
+    (0..m).into_iter().map(|r_ind| {
+        maze.windows(2).into_iter().filter(move |w| {
+            w[1][r_ind] != 0 && w[0][r_ind] != 0
+        })
+    }).count()
+}
+
 pub fn part_2(mut robots: Vec<Robot>, max_x: i32, max_y: i32) -> Option<usize> {
+    // let mut min_std_so_far: f32 = 1e10;
+    let mut max_continuity: usize = 0;
     return (0..).position( |i| {
         if i % 1000 == 0 {
             print!("{}\t", i);
@@ -157,9 +179,19 @@ pub fn part_2(mut robots: Vec<Robot>, max_x: i32, max_y: i32) -> Option<usize> {
             r.step(max_x, max_y);
         });
         let maze = convert_to_map(&robots, max_x, max_y);
-        let found = is_symmetric(&maze);
-        if found {print_scene(&maze);}
-        found
+        let new_continuity = measure_of_continuity(&maze);
+        // println!("{}", new_continuity);
+        if new_continuity > max_continuity {
+            max_continuity = new_continuity;
+            println!("\n-----------------------------------------------------------------------------------\n");
+            println!("{}", i);
+            print_scene(&maze);
+            println!("\n-----------------------------------------------------------------------------------\n");
+        }
+        // let found = is_symmetric(&maze);
+        // if found {print_scene(&maze);}
+        // found
+        false
     });
 }
 
@@ -172,6 +204,9 @@ mod tests {
         // let mut r = Robot{p: Point{x: 2, y: 4}, v: Velocity{dx: 2, dy: -3}};
         // r.step_n(11, 7, 5);
         // println!("{:?}", r.p);
+        // let robots_vec = read_input_from_file("data/example.txt");
+        // let maze = convert_to_map(&robots_vec, 11, 7);
+        // print_scene(&maze);
         let robots_vec = read_input_from_file("data/input.txt");
         part_2(robots_vec, 101, 103);
         // assert_eq!(part_1("data/example.txt", 11, 7, 100), 12);
